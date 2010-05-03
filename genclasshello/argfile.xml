@@ -1,0 +1,2 @@
+ <arg value = "clojure.examples.hello" /> 
+<arg value = "run"/>
