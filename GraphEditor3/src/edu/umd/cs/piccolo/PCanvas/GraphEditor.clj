@@ -9,7 +9,7 @@
    (java.awt Color Dimension)
    (edu.umd.cs.piccolo   PCanvas PLayer PNode PRoot)
    (edu.umd.cs.piccolo.nodes   PPath)
-   (java.util   Random)
+   (java.util   ArrayList Random)
    (javax.swing   JFrame)
    ))
 
@@ -21,29 +21,38 @@
   (let [{:keys [numEdges numNodes random]} (.state this)
         nodeLayer (.getLayer this)
         edgeLayer (PLayer.)
-        node (PPath/createEllipse 40 60 20 20)
+        node1 (PPath/createEllipse 40 60 20 20)
+        node2 (PPath/createEllipse 140 160 20 20)
+        edge (PPath.)
         ]
     (.addChild (.getRoot this) edgeLayer)
     (.addLayer (.getCamera this) 0 edgeLayer)
-    (.addChild nodeLayer node)
+    (.addAttribute node1 "edges" (make-array PPath numEdges))
+    (.addAttribute node2 "edges" (make-array PPath numEdges))
+
+    (aset (.getAttribute node1 "edges") 0 edge)
+
     (println (.nextInt random numNodes))
-    ))
+    (doto nodeLayer
+      (.addChild node1)
+      (.addChild node2)
+      )))
 
-(defn -main []
-  (let [window (JFrame.)
-        ge (edu.umd.cs.piccolo.PCanvas.GraphEditor. 500 500)]
-    (println "... got to beginning of let")
-    (doto window
-      (.setTitle "Piccolo Graphics Editor")
-      (.setDefaultCloseOperation JFrame/EXIT_ON_CLOSE))
-    (.add (.getContentPane window) ge)
-    (println "... got to adding Graphics Editor to window")
-    (doto window
-      (.pack)
-      (.setVisible true))
-    )
+  (defn -main []
+    (let [window (JFrame.)
+          ge (edu.umd.cs.piccolo.PCanvas.GraphEditor. 500 500)]
+      (println "... got to beginning of let")
+      (doto window
+        (.setTitle "Piccolo Graphics Editor")
+        (.setDefaultCloseOperation JFrame/EXIT_ON_CLOSE))
+      (.add (.getContentPane window) ge)
+      (println "... got to adding Graphics Editor to window")
+      (doto window
+        (.pack)
+        (.setVisible true))
+      )
 
-  (println "Goodbye!"))
+    (println "Goodbye!"))
 
 
 
