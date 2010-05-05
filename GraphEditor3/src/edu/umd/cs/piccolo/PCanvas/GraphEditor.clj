@@ -14,7 +14,7 @@
    ))
 
 (defn -init [width height]
-  [[] { :numNodes 50, :numEdges 50, :random (Random.) }])
+  [[] { :num-nodes 5, :num-edges 5, :random (Random.) }])
 
 (defn add-to-node [node edge]
   (let [num-ref (.getAttribute node "num-used")
@@ -32,47 +32,55 @@
 
 (defn -GraphEditorInit [this width height]
   (.setPreferredSize this (Dimension. width height))
-  (let [{:keys [numEdges numNodes random]} (.state this)
+  (let [{:keys [num-edges num-nodes random]} (.state this)
         nodeLayer (.getLayer this)
         edgeLayer (PLayer.)
-        node1 (PPath/createEllipse 40 60 20 20)
-        node2 (PPath/createEllipse 140 160 20 20)
-        edge1 (PPath.)
+        node-ref-vector (take num-nodes
+    ; error: repeats the same ref over and over
+                          (repeat (ref (PPath/createEllipse
+                                    (.nextInt random width)
+                                    (.nextInt random height)
+                                    20
+                                    20))))
         ]
+
+    ; error: no nodes are displayed in window
+    (defn install-node [node]
+      (.addAttribute node "edges" (make-array PPath num-edges))
+      (.addAttribute node "num-used" (ref 0))
+      (.addChild nodeLayer node)
+      node)
+
     (.addChild (.getRoot this) edgeLayer)
     (.addLayer (.getCamera this) 0 edgeLayer)
-    (.addAttribute node1 "edges" (make-array PPath numEdges))
-    (.addAttribute node1 "num-used" (ref 0))
-    (.addAttribute edge1 "nodes" (make-array PPath numNodes))
-    (.addAttribute edge1 "num-used" (ref 0))
 
-    (add-to-node node1 edge1)
-    (println @(.getAttribute node1 "num-used"))
+    (println node-ref-vector)
 
-    (add-to-edge edge1 node1)
-    (add-to-edge edge1 node2)
-    (println @(.getAttribute edge1 "num-used"))
-
-    (doto nodeLayer
-      (.addChild node1)
-      (.addChild node2)
-      )))
-
-  (defn -main []
-    (let [window (JFrame.)
-          ge (edu.umd.cs.piccolo.PCanvas.GraphEditor. 500 500)]
-      (println "... got to beginning of let")
-      (doto window
-        (.setTitle "Piccolo Graphics Editor")
-        (.setDefaultCloseOperation JFrame/EXIT_ON_CLOSE))
-      (.add (.getContentPane window) ge)
-      (println "... got to adding Graphics Editor to window")
-      (doto window
-        (.pack)
-        (.setVisible true))
+    ; error: this doesn't print anything!
+    (for [node-ref node-ref-vector]
+      (do
+      (println node-ref)
+      (dosync
+        (alter node-ref install-node)))
       )
 
-    (println "Goodbye!"))
+    ))
+
+(defn -main []
+  (let [window (JFrame.)
+        ge (edu.umd.cs.piccolo.PCanvas.GraphEditor. 500 500)]
+    (println "... got to beginning of let")
+    (doto window
+      (.setTitle "Piccolo Graphics Editor")
+      (.setDefaultCloseOperation JFrame/EXIT_ON_CLOSE))
+    (.add (.getContentPane window) ge)
+    (println "... got to adding Graphics Editor to window")
+    (doto window
+      (.pack)
+      (.setVisible true))
+    )
+
+  (println "Goodbye!"))
 
 
 
