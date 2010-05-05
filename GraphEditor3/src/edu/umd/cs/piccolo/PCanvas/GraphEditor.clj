@@ -16,6 +16,20 @@
 (defn -init [width height]
   [[] { :numNodes 50, :numEdges 50, :random (Random.) }])
 
+(defn add-to-node [node edge]
+  (let [num-ref (.getAttribute node "num-used")
+        current-count @num-ref]
+    (dosync
+      (aset (.getAttribute node "edges") current-count edge)
+      (alter num-ref inc))))
+
+(defn add-to-edge [edge node]
+  (let [num-ref (.getAttribute edge "num-used")
+        current-count @num-ref]
+    (dosync
+      (aset (.getAttribute edge "nodes") current-count node)
+      (alter num-ref inc))))
+
 (defn -GraphEditorInit [this width height]
   (.setPreferredSize this (Dimension. width height))
   (let [{:keys [numEdges numNodes random]} (.state this)
@@ -23,16 +37,22 @@
         edgeLayer (PLayer.)
         node1 (PPath/createEllipse 40 60 20 20)
         node2 (PPath/createEllipse 140 160 20 20)
-        edge (PPath.)
+        edge1 (PPath.)
         ]
     (.addChild (.getRoot this) edgeLayer)
     (.addLayer (.getCamera this) 0 edgeLayer)
     (.addAttribute node1 "edges" (make-array PPath numEdges))
-    (.addAttribute node2 "edges" (make-array PPath numEdges))
+    (.addAttribute node1 "num-used" (ref 0))
+    (.addAttribute edge1 "nodes" (make-array PPath numNodes))
+    (.addAttribute edge1 "num-used" (ref 0))
 
-    (aset (.getAttribute node1 "edges") 0 edge)
+    (add-to-node node1 edge1)
+    (println @(.getAttribute node1 "num-used"))
 
-    (println (.nextInt random numNodes))
+    (add-to-edge edge1 node1)
+    (add-to-edge edge1 node2)
+    (println @(.getAttribute edge1 "num-used"))
+
     (doto nodeLayer
       (.addChild node1)
       (.addChild node2)
