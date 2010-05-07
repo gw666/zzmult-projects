@@ -35,35 +35,38 @@
   (let [{:keys [num-edges num-nodes random]} (.state this)
         nodeLayer (.getLayer this)
         edgeLayer (PLayer.)
-        node-ref-vector (take num-nodes
-    ; error: repeats the same ref over and over
-                          (repeat (ref (PPath/createEllipse
-                                    (.nextInt random width)
-                                    (.nextInt random height)
-                                    20
-                                    20))))
+        node-ref-vector   ; its value is result of loop, on next line
+        (loop [result [], x num-nodes]
+          (if (zero? x)
+            result   ; returned if true
+            (recur (conj result (PPath/createEllipse
+                                  (.nextInt random width)
+                                  (.nextInt random height)
+                                  20
+                                  20))
+              (dec x))))   ; returned if false
+        n1 (first node-ref-vector)
         ]
 
     ; error: no nodes are displayed in window
     (defn install-node [node]
+      (println node)
+      (.addChild nodeLayer node)
       (.addAttribute node "edges" (make-array PPath num-edges))
       (.addAttribute node "num-used" (ref 0))
-      (.addChild nodeLayer node)
-      node)
+      )
 
     (.addChild (.getRoot this) edgeLayer)
     (.addLayer (.getCamera this) 0 edgeLayer)
 
+;    (println "vector")
     (println node-ref-vector)
-
-    ; error: this doesn't print anything!
-    (for [node-ref node-ref-vector]
-      (do
-      (println node-ref)
-      (dosync
-        (alter node-ref install-node)))
-      )
-
+;    (doall (map install-node node-ref-vector))
+    (doall (for [nv node-ref-vector]
+      (install-node nv)))
+    (println @(.getAttribute n1 "num-used"))
+    (add-to-node n1 (PPath.))
+    (println @(.getAttribute n1 "num-used"))
     ))
 
 (defn -main []
@@ -81,8 +84,3 @@
     )
 
   (println "Goodbye!"))
-
-
-
-
-
