@@ -32,8 +32,8 @@
 (defn -GraphEditorInit [this width height]
   (.setPreferredSize this (Dimension. width height))
   (let [{:keys [num-edges num-nodes random]} (.state this)
-        nodeLayer (.getLayer this)
-        edgeLayer (PLayer.)
+        node-layer (.getLayer this)
+        edge-layer (PLayer.)
         node-vector   ; its value is result of loop, on next line
         (loop [result [], x num-nodes]
           (if (zero? x)
@@ -45,17 +45,18 @@
                                   20))
               (dec x))))   ; returned if false
         n1 (first node-vector)
+        ignore-this 50
         ]
 
     (defn install-node [node]
-      (println node)
-      (.addChild nodeLayer node)
+      ;      (println node)
+      (.addChild node-layer node)
       (.addAttribute node "edges" (make-array PPath num-edges))
       (.addAttribute node "num-used" 0)
       )
 
-    (.addChild (.getRoot this) edgeLayer)
-    (.addLayer (.getCamera this) 0 edgeLayer)
+    (.addChild (.getRoot this) edge-layer)
+    (.addLayer (.getCamera this) 0 edge-layer)
 
     ;    (println "vector")
     (println node-vector)
@@ -63,19 +64,28 @@
     (doall (for [nv node-vector]
              (install-node nv)))
 
-    ; the test below proves that add-to-node adds new PPaths correctly
-    ; into the array edges, and that num-used can be updated by executing
-    ; addAttribute a second time (no need for refs)
-    (let [p1 (PPath/createEllipse 50 50 20 30)
-          p2 (PPath/createRectangle 100 100 40 20)]
-      (println (.getAttribute n1 "num-used"))
-      (println p1)
-      (println p2)
-      (add-to-node n1 p1)
-      (add-to-node n1 p2)
-      (println (.getAttribute n1 "num-used"))
-      ; should the same as p2
-      (println (aget (.getAttribute n1 "edges") 1)))
+    (defn random-from-num-nodes [_]
+      (vector (.nextInt random num-nodes) (.nextInt random num-nodes)))
+
+    (defn not-equal? [pair]
+      (not= (nth pair 0) (nth pair 1)))
+
+    (defn process-edge-for-nodes [pair]
+      (let [n1 (nth pair 0)
+            n2 (nth pair 1)
+            edge (PPath.)
+            node1 (.getChild node-layer n1)
+            node2 (.getChild node-layer n2)]
+        (add-to-node node1 edge)
+        (add-to-node node2 edge)
+        (add-to-edge edge node1)
+        (add-to-edge edge node2)
+        (.addChild edge-layer edge)))
+
+    (let [random-pair-seq (drop 1 (iterate random-from-num-nodes ignore-this))
+          pairs-for-edges (take num-edges random-pair-seq)]
+      (map process-edge-for-nodes pairs-for-edges))
+
     ))
 
 (defn -main []
