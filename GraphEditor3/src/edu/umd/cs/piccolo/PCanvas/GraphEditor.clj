@@ -8,7 +8,9 @@
  (:import
    (java.awt Color Dimension)
    (edu.umd.cs.piccolo   PCanvas PLayer PNode PRoot)
+   (edu.umd.cs.piccolo.util   PBounds)
    (edu.umd.cs.piccolo.nodes   PPath)
+   (java.awt.geom   Point2D)
    (java.util   ArrayList Random)
    (javax.swing   JFrame)
    ))
@@ -63,6 +65,17 @@
       (.addAttribute edge "nodes" (make-array PPath num-nodes-per-edge))
       (.addAttribute edge "num-used" 0))
 
+   (defn update-edge [edge]
+      (let [node1 (aget (.getAttribute edge "nodes") 0)
+            node2 (aget (.getAttribute edge "nodes") 1)
+            start (.. node1 getFullBoundsReference getCenter2D)
+            end   (.. node2 getFullBoundsReference getCenter2D)]
+        (.reset edge)
+        (println (str "Draw from (" (.getX start) " "  (.getY start)
+                   ") to (" (.getX end) " "  (.getY end) ")" ))
+        (.moveTo edge (.getX start) (.getY start))
+        (.lineTo edge (.getX end) (.getY end))))
+
     (.addChild (.getRoot this) edge-layer)
     (.addLayer (.getCamera this) 0 edge-layer)
 
@@ -90,6 +103,7 @@
         (add-to-node node2 edge)
         (add-to-edge edge node1)
         (add-to-edge edge node2)
+        (update-edge edge)
         (println "###### end process-edge-for-nodes ######")))
 
     (let [random-pair-seq (drop 1 (iterate random-from-num-nodes ignore-this))
