@@ -21,20 +21,22 @@
   (let [current-count (.getAttribute node "num-used")
         ]
     (aset (.getAttribute node "edges") current-count edge)
+    (println (str "edge " edge " added to " node " at position " current-count))
     (.addAttribute node "num-used" (inc current-count))))
 
 (defn add-to-edge [edge node]
   (let [current-count (.getAttribute edge "num-used")
         ]
     (aset (.getAttribute edge "nodes") current-count node)
+    (println (str "node " node " added to " edge " at position " current-count))
     (.addAttribute edge "num-used" (inc current-count))))
 
 (defn -GraphEditorInit [this width height]
   (.setPreferredSize this (Dimension. width height))
-  (let [{:keys [num-edges num-nodes random]} (.state this)
+ (let [{:keys [num-edges num-nodes random]} (.state this)
         node-layer (.getLayer this)
         edge-layer (PLayer.)
-        node-vector   ; its value is result of loop, on next line
+        node-vector   ; its value is result of loop on next line
         (loop [result [], x num-nodes]
           (if (zero? x)
             result   ; returned if true
@@ -44,7 +46,8 @@
                                   20
                                   20))
               (dec x))))   ; returned if false
-        n1 (first node-vector)
+;        n1 (first node-vector)
+       num-nodes-per-edge   2
         ignore-this 50
         ]
 
@@ -52,8 +55,13 @@
       ;      (println node)
       (.addChild node-layer node)
       (.addAttribute node "edges" (make-array PPath num-edges))
-      (.addAttribute node "num-used" 0)
-      )
+      (.addAttribute node "num-used" 0))
+
+    (defn install-edge [edge]
+      ;      (println node)
+      (.addChild edge-layer edge)
+      (.addAttribute edge "nodes" (make-array PPath num-nodes-per-edge))
+      (.addAttribute edge "num-used" 0))
 
     (.addChild (.getRoot this) edge-layer)
     (.addLayer (.getCamera this) 0 edge-layer)
@@ -76,17 +84,20 @@
             edge (PPath.)
             node1 (.getChild node-layer n1)
             node2 (.getChild node-layer n2)]
+        (println (str  "Processing node " pair))
+        (install-edge edge)
         (add-to-node node1 edge)
         (add-to-node node2 edge)
         (add-to-edge edge node1)
         (add-to-edge edge node2)
-        (.addChild edge-layer edge)))
+        (println "###### end process-edge-for-nodes ######")))
 
     (let [random-pair-seq (drop 1 (iterate random-from-num-nodes ignore-this))
-          pairs-for-edges (take num-edges random-pair-seq)]
-      (map process-edge-for-nodes pairs-for-edges))
+          pairs-for-edges (take num-edges (filter not-equal? random-pair-seq))]
+      (doall (map process-edge-for-nodes pairs-for-edges))
+      (println "Done with creation of nodes and edges"))
 
-    ))
+      ))
 
 (defn -main []
   (let [window (JFrame.)
