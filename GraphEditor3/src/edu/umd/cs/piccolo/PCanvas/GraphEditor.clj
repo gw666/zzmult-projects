@@ -6,13 +6,16 @@
    :post-init GraphEditorInit
    :constructors {[int int] []})
  (:import
-   (java.awt Color Dimension)
    (edu.umd.cs.piccolo   PCanvas PLayer PNode PRoot)
-   (edu.umd.cs.piccolo.util   PBounds)
+   (edu.umd.cs.piccolo.event   PBasicInputEventHandler PDragEventHandler
+     PInputEvent PInputEventFilter)
    (edu.umd.cs.piccolo.nodes   PPath)
+   (edu.umd.cs.piccolo.util   PBounds)
+   (java.awt Color Dimension Graphics2D)
+   (java.awt.event   InputEvent MouseEvent)
    (java.awt.geom   Point2D)
-   (java.util   ArrayList Random)
    (javax.swing   JFrame)
+   (java.util   ArrayList Random)
    ))
 
 (defn -init [width height]
@@ -35,7 +38,7 @@
 
 (defn -GraphEditorInit [this width height]
   (.setPreferredSize this (Dimension. width height))
- (let [{:keys [num-edges num-nodes random]} (.state this)
+  (let [{:keys [num-edges num-nodes random]} (.state this)
         node-layer (.getLayer this)
         edge-layer (PLayer.)
         node-vector   ; its value is result of loop on next line
@@ -48,8 +51,8 @@
                                   20
                                   20))
               (dec x))))   ; returned if false
-;        n1 (first node-vector)
-       num-nodes-per-edge   2
+        ;        n1 (first node-vector)
+        num-nodes-per-edge   2
         ignore-this 50
         ]
 
@@ -65,7 +68,7 @@
       (.addAttribute edge "nodes" (make-array PPath num-nodes-per-edge))
       (.addAttribute edge "num-used" 0))
 
-   (defn update-edge [edge]
+    (defn update-edge [edge]
       (let [node1 (aget (.getAttribute edge "nodes") 0)
             node2 (aget (.getAttribute edge "nodes") 1)
             start (.. node1 getFullBoundsReference getCenter2D)
@@ -111,7 +114,33 @@
       (doall (map process-edge-for-nodes pairs-for-edges))
       (println "Done with creation of nodes and edges"))
 
-      ))
+    (doto node-layer
+      (.addInputEventListener
+        (proxy [PDragEventHandler] []
+          (let [filter (PInputEventFilter.)]
+            (.setOrMask filter (+ InputEvent/BUTTON1_MASK
+                                 InputEvent/BUTTON3_MASK))
+            (.setEventFilter filter))
+          (mouseEntered [e]
+            (proxy-super mouseEntered e)
+            (if (= (.getButton e) MouseEvent/NOBUTTON)
+              (. (. e getPickedNode) setPaint Color/RED)))
+          (mouseExited [e]
+            (proxy-super mouseExited e)
+            (if (= (.getButton e) MouseEvent/NOBUTTON)
+              (. (. e getPickedNode) setPaint Color/WHITE)))
+          (startDrag [e]
+            (proxy-super startDrag e)
+            (.setHandled e true)
+            (. (. e getPickedNode) moveToFront))
+          (drag [e]
+            (proxy-super drag e)
+            (let [edges (. (. e getPickedNode) getAttribute "edges")]
+              (println "edges during drag")
+              (println edges)
+              (map update-edge edges)
+              )))))
+    ))
 
 (defn -main []
   (let [window (JFrame.)
@@ -124,7 +153,5 @@
     (println "... got to adding Graphics Editor to window")
     (doto window
       (.pack)
-      (.setVisible true))
-    )
-
+      (.setVisible true)))
   (println "Goodbye!"))
