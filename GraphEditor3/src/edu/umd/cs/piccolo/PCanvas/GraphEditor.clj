@@ -20,7 +20,7 @@
 
 (defn -init [width height]
   ; returns [ signature of superclass (no args), value of state (a map) ]
-  [[] { :num-nodes 5, :num-edges 5, :random (Random.) }])
+  [[] { :num-nodes 50, :num-edges 50, :random (Random.) }])
 
 (defn add-to-node [node edge]
   (let [current-count (.getAttribute node "num-used")
@@ -41,7 +41,7 @@
   (let [{:keys [num-edges num-nodes random]} (.state this)
         node-layer (.getLayer this)
         edge-layer (PLayer.)
-        node-vector   ; its value is result of loop on next line
+        node-vector   ; its value is on next line
         (loop [result [], x num-nodes]
           (if (zero? x)
             result   ; returned if true
@@ -51,7 +51,6 @@
                                   20
                                   20))
               (dec x))))   ; returned if false
-        ;        n1 (first node-vector)
         num-nodes-per-edge   2
         ignore-this 50
         ]
@@ -74,7 +73,7 @@
             start (.. node1 getFullBoundsReference getCenter2D)
             end   (.. node2 getFullBoundsReference getCenter2D)]
         (.reset edge)
-        (println (str "Draw from (" (.getX start) " "  (.getY start)
+        (println (str "update-edge: draw from (" (.getX start) " "  (.getY start)
                    ") to (" (.getX end) " "  (.getY end) ")" ))
         (.moveTo edge (.getX start) (.getY start))
         (.lineTo edge (.getX end) (.getY end))))
@@ -82,9 +81,8 @@
     (.addChild (.getRoot this) edge-layer)
     (.addLayer (.getCamera this) 0 edge-layer)
 
-    ;    (println "vector")
+    (println "vector")
     (println node-vector)
-    ;    (doall (map install-node node-vector))
     (doall (for [nv node-vector]
              (install-node nv)))
 
@@ -94,7 +92,7 @@
     (defn not-equal? [pair]
       (not= (nth pair 0) (nth pair 1)))
 
-    (defn process-edge-for-nodes [pair]
+    (defn process-edge-connecting-nodes [pair]
       (let [n1 (nth pair 0)
             n2 (nth pair 1)
             edge (PPath.)
@@ -110,37 +108,56 @@
         (println "###### end process-edge-for-nodes ######")))
 
     (let [random-pair-seq (drop 1 (iterate random-from-num-nodes ignore-this))
-          pairs-for-edges (take num-edges (filter not-equal? random-pair-seq))]
-      (doall (map process-edge-for-nodes pairs-for-edges))
-      (println "Done with creation of nodes and edges"))
+          node-pairs (take num-edges (filter not-equal? random-pair-seq))]
+      (doall (map process-edge-connecting-nodes node-pairs))
+      (println "###### Done processing edges and nodes ######"))
 
-    (doto node-layer
-      (.addInputEventListener
-        (proxy [PDragEventHandler] []
-          (let [filter (PInputEventFilter.)]
-            (.setOrMask filter (+ InputEvent/BUTTON1_MASK
-                                 InputEvent/BUTTON3_MASK))
-            (.setEventFilter filter))
-          (mouseEntered [e]
-            (proxy-super mouseEntered e)
-            (if (= (.getButton e) MouseEvent/NOBUTTON)
-              (. (. e getPickedNode) setPaint Color/RED)))
-          (mouseExited [e]
-            (proxy-super mouseExited e)
-            (if (= (.getButton e) MouseEvent/NOBUTTON)
-              (. (. e getPickedNode) setPaint Color/WHITE)))
-          (startDrag [e]
-            (proxy-super startDrag e)
-            (.setHandled e true)
-            (. (. e getPickedNode) moveToFront))
-          (drag [e]
-            (proxy-super drag e)
-            (let [edges (. (. e getPickedNode) getAttribute "edges")]
-              (println "edges during drag")
-              (println edges)
-              (map update-edge edges)
-              )))))
-    ))
+    (println "\n\n###### DUMP OF NODES WITH THEIR EDGES ######")
+    (doall (for [nv node-vector]
+             (let [edges (.getAttribute nv "edges")
+                   num-used-limit (.getAttribute nv "num-used")]
+               (print "node" nv "\n")
+               (loop [index 0]
+                 (if (< index num-used-limit)
+                   (do
+                     (update-edge (aget edges index))
+                     (recur (inc index)))))
+               )))
+
+
+    ; No matching field found: setEventFilter for class
+    ;  edu.umd.cs.piccolo.event.PInputEventFilter
+    (let [filter (PInputEventFilter.)
+          custom-handler   ; its value is on next line
+          (proxy [PDragEventHandler] []
+            (mouseEntered [e]
+              (proxy-super mouseEntered e)
+              (if (= (.getButton e) MouseEvent/NOBUTTON)
+                (. (. e getPickedNode) setPaint Color/RED)))
+            (mouseExited [e]
+              (proxy-super mouseExited e)
+              (if (= (.getButton e) MouseEvent/NOBUTTON)
+                (. (. e getPickedNode) setPaint Color/WHITE)))
+            (startDrag [e]
+              (proxy-super startDrag e)
+              (.setHandled e true)
+              (. (. e getPickedNode) moveToFront))
+            (drag [e]
+              (proxy-super drag e)
+              (let [node (.getPickedNode e)
+                    edges (.getAttribute node "edges")
+                    num-used-limit (.getAttribute node "num-used")]
+                (loop [index 0]
+                  (if (< index num-used-limit)
+                    (do
+                      (update-edge (aget edges index))
+                      (recur (inc index)))))
+                )))]
+
+      (.setOrMask filter (+ InputEvent/BUTTON1_MASK
+                           InputEvent/BUTTON3_MASK))
+      (.setEventFilter custom-handler filter)
+      (.addInputEventListener node-layer custom-handler))))
 
 (defn -main []
   (let [window (JFrame.)
