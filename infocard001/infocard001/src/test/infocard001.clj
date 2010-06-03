@@ -7,7 +7,7 @@
      PZoomEventHandler)
    (edu.umd.cs.piccolo.util   PBounds)
    (java.awt.geom   Dimension2D Point2D)
-   (java.awt   Rectangle)
+   (java.awt   Font GraphicsEnvironment Rectangle)
    (edu.umd.cs.piccolox PFrame)))
 
 (defn create-frame
@@ -17,7 +17,7 @@
     (initialize []
       (let [t (str "Slow down your day\n\n"
                 "We are at our least effective when we act in reaction to \n"
-                "whatever was the most recent thought in our head When the \n"
+                "whatever was the most recent thought in our head. When the \n"
                 "brain is very active, it spins from idea to idea with little\n"
                 "sense of connection between the two. Calming the mind becomes \n"
                 "necessary before we can hope to have any sense of mastery \n"
@@ -26,7 +26,11 @@
             aNode (PText. t)
             aNode2 (PPath/createRectangle 0 0 10 10)
             thisLayer (.. this getCanvas getLayer)
+            font (.getFont aNode)
+            font2 (Font. "Monospaced", Font/PLAIN, 14)
+            font3 (.deriveFont font (float 18))
             ]
+        (.setFont aNode font2)
         (.. this getCanvas (addInputEventListener (PDragEventHandler.)))
         ; without this, mouse drag on one node will cause movement of node
         ; plus pan of canvas, leading to illusion two nodes are linked
@@ -41,6 +45,9 @@
 
         (.addChild thisLayer aNode2)
         (.addChild aNode2 aNode)
+
+        (println (.toString (.getFont aNode)))
+
         ;(println (.toString (.getBounds aNode)))
         ;(println (.getOrigin ))
         ;(println (.localToGlobal (.getOrigin (.getBounds aNode))))
