@@ -9,7 +9,7 @@
    (edu.umd.cs.piccolox PFrame)
    (edu.umd.cs.piccolox.nodes PClip)
    (java.awt.geom   Dimension2D Point2D)
-   (java.awt   Font GraphicsEnvironment Rectangle)
+   (java.awt   BasicStroke Font GraphicsEnvironment Rectangle)
    ))
 
 (defn create-frame
@@ -29,25 +29,36 @@
             cardBorder (PPath/createRectangle 0 0 100 10)
             clipRect (PClip.)
             thisLayer (.. this getCanvas getLayer)
+
+            ; how to get the font of a text node
             font (.getFont cardText)
+
+            ; how to create a new font
             font2 (Font. "Monospaced", Font/PLAIN, 14)
-            ; shows how to change size of an existing font
-            ;font3 (.deriveFont font (float 18))
+
+            ; see commented line below: how to change size of existing font
+            ;font2 (.deriveFont font (float 18))
             ]
         (.setFont cardText font2)
+
+        ; set cardBorder to enclose cardText node
         (let [cardTextBounds (.getGlobalBounds cardText)]
-          (.inset cardTextBounds -5 -5)
+          (.inset cardTextBounds -14 -14)  ; give it some border space
           (.setBounds cardBorder cardTextBounds))
-        (.setPathToRectangle clipRect 0 0 500 40)
 
-        (.addChild cardBorder cardText)
-        ;(.addChild clipRect cardBorder)
-        (.addChild thisLayer cardBorder)
-        ;(.addChild thisLayer clipRect)
+        ; create clip border thick enough to be grabbed with mouse pointer
+        (.setStroke clipRect (BasicStroke. (float 4)))
+        (.setPathToRectangle clipRect 0 0 300 18)
 
-        (.setChildrenPickable cardBorder false)
-        ;(.setChildrenPickable clipRect false)
+        ; set hierarchy of layer to clip, border, and text nodes
+        (.addChild clipRect cardBorder)
+        (.addChild clipRect cardText)
+        (.addChild thisLayer clipRect)
 
+        ; ensure that clip, border, and text move together
+        (.setChildrenPickable clipRect false)
+
+        ; install basic drag event handler, disable default pan handler
         (.. this getCanvas (addInputEventListener (PDragEventHandler.)))
         ; without next line, mouse drag on one node will cause movement of node
         ; plus pan of canvas, leading to illusion two nodes are linked
@@ -58,11 +69,13 @@
 
 
 
-        (println (.toString (.getFont cardText)))
+        ; how to print the font used by cardText node
+        ;(println (.toString (.getFont cardText)))
 
-        ;(println (.toString (.getBounds cardText)))
-        ;(println (.getOrigin ))
-        ;(println (.localToGlobal (.getOrigin (.getBounds cardText))))
+        ; simple experiments with coordinate systems
+        (println (.toString (.getBounds cardText)))
+        (println (.getOrigin (.getBounds cardText)))
+;        (println (.localToGlobal (.getOrigin (.getBounds cardText))))
         ;(println (.. localToGlobal getOrigin getBounds cardText))
         ))))
 
